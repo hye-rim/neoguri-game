@@ -242,3 +242,6 @@ addEventListener('keyup', (e) => { keys[e.key] = false; });
   el.addEventListener('pointerdown', on);
   ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => el.addEventListener(ev, off));
 });
+
+addEventListener('contextmenu', (e) => e.preventDefault());
+addEventListener('selectstart', (e) => e.preventDefault());
