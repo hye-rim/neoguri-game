@@ -121,7 +121,7 @@ function update(dt) {
   if (msgTimer > 0) msgTimer -= dt;
   if (invuln > 0) invuln -= dt;
 
-  const SP = 150, CL = 120, JT = 0.6, JH = 55;
+  const SP = 150, CL = 120, JT = 0.6, JH = 32;
   const left = keys.ArrowLeft, right = keys.ArrowRight, up = keys.ArrowUp, down = keys.ArrowDown;
   const jumping = p.jt >= 0;
   if (p.fall) {
@@ -152,7 +152,7 @@ function update(dt) {
     }
   }
   jumpReq = false;
-  const air = p.jy > 20;
+  const air = p.jy > 16;
 
   // 음식
   if (!p.ladder && !p.fall) foods.forEach((fd) => {
