@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>너구리</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#0a0a12; font-family:'Courier New', monospace; touch-action:none; }
+  #stage { position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+  #game { display:block; width:100%; height:100%; background:#101830; box-shadow:0 0 0 4px #1a1a2e, 0 0 40px rgba(0,0,0,0.6); }
+  #wrap { position:relative; height:100%; aspect-ratio:3/4; max-width:100%; }
+  #controls { position:absolute; bottom:8px; left:0; right:0; display:flex; justify-content:space-between; padding:0 10px; pointer-events:none; }
+  .pad { display:grid; grid-template-columns:repeat(3,52px); grid-template-rows:repeat(2,52px); gap:4px; pointer-events:auto; }
+  .btn { background:#fff8e0cc; border:3px solid #1a1a2e; box-shadow:3px 3px 0 #000; font-size:20px; font-weight:bold; color:#1a1a2e; }
+  .btn:active { transform:translate(2px,2px); box-shadow:1px 1px 0 #000; }
+  #up { grid-column:2; grid-row:1; } #left { grid-column:1; grid-row:2; } #down { grid-column:2; grid-row:2; } #right { grid-column:3; grid-row:2; }
+  #overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff8e0; text-align:center; text-shadow:2px 2px 0 #000; background:rgba(10,10,20,0.85); padding:20px; }
+  #overlay.hidden { display:none; }
+  #overlay h1 { font-size:40px; margin-bottom:12px; }
+  #overlay p { font-size:14px; line-height:1.7; margin-bottom:18px; }
+  #startBtn { padding:12px 28px; font-size:18px; background:#ffd23f; border:3px solid #1a1a2e; box-shadow:3px 3px 0 #000; font-family:inherit; font-weight:bold; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="wrap">
+  <canvas id="game"></canvas>
+  <div id="controls">
+    <div class="pad">
+      <button class="btn" id="up">▲</button><button class="btn" id="left">◀</button><button class="btn" id="down">▼</button><button class="btn" id="right">▶</button>
+    </div>
+  </div>
+  <div id="overlay">
+    <h1 id="title">🦝 너구리</h1>
+    <p id="msg">사다리를 오르내리며 층마다 놓인 음식을 모두 먹으세요!<br>🐛 지네와 📌 압정, 🐍 뱀을 조심!<br>❓ 항아리는 보너스 또는 뱀이 나와요<br>← → ↑ ↓ 방향키로 이동</p>
+    <button id="startBtn">게임 시작</button>
+  </div>
+</div></div>
+<script src="game.js"></script>
+</body>
+</html>
