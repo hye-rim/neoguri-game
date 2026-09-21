@@ -14,6 +14,7 @@
   .pad { display:grid; grid-template-columns:repeat(3,52px); grid-template-rows:repeat(2,52px); gap:4px; pointer-events:auto; }
   .btn { touch-action:none; background:#fff8e0cc; border:3px solid #1a1a2e; box-shadow:3px 3px 0 #000; font-size:20px; font-weight:bold; color:#1a1a2e; }
   .btn:active { transform:translate(2px,2px); box-shadow:1px 1px 0 #000; }
+  #jump { pointer-events:auto; width:90px; height:90px; align-self:flex-end; border-radius:50%; background:#ffd23fdd; font-size:18px; }
   #up { grid-column:2; grid-row:1; } #left { grid-column:1; grid-row:2; } #down { grid-column:2; grid-row:2; } #right { grid-column:3; grid-row:2; }
   #overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff8e0; text-align:center; text-shadow:2px 2px 0 #000; background:rgba(10,10,20,0.85); padding:20px; }
   #overlay.hidden { display:none; }
@@ -29,10 +30,11 @@
     <div class="pad">
       <button class="btn" id="up">▲</button><button class="btn" id="left">◀</button><button class="btn" id="down">▼</button><button class="btn" id="right">▶</button>
     </div>
+    <button class="btn" id="jump">점프</button>
   </div>
   <div id="overlay">
     <h1 id="title">🦝 너구리</h1>
-    <p id="msg">사다리를 오르내리며 층마다 놓인 음식을 모두 먹으세요!<br>🐛 지네와 📌 압정, 🐍 뱀을 조심!<br>❓ 항아리는 보너스 또는 뱀이 나와요<br>← → ↑ ↓ 방향키로 이동</p>
+    <p id="msg">사다리를 오르내리며 층마다 놓인 음식을 모두 먹으세요!<br>🐛 지네와 📌 압정, 🐍 뱀을 조심!<br>❓ 항아리는 보너스 또는 뱀이 나와요<br>← → ↑ ↓ 이동, Space(점프 버튼)로 점프!<br>끊어진 바닥은 점프로 건너세요 (빠지면 -5초)<br>점프하면 압정과 지네도 넘을 수 있어요</p>
     <button id="startBtn">게임 시작</button>
   </div>
 </div></div>
