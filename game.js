@@ -2,7 +2,10 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const W = 480, H = 640;
-canvas.width = W; canvas.height = H;
+// 화면 배율만큼 크게 그려서 휴대폰에서도 선명하게
+const DPR = Math.min(2, window.devicePixelRatio || 1);
+canvas.width = W * DPR; canvas.height = H * DPR;
+ctx.scale(DPR, DPR);
 
 const overlay = document.getElementById('overlay');
 const startBtn = document.getElementById('startBtn');
@@ -213,44 +216,168 @@ function update(dt) {
   }
 }
 
-function draw() {
-  ctx.fillStyle = '#101830'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px monospace'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-  ctx.fillText(`SCORE ${score}`, 12, 20);
-  ctx.textAlign = 'center';
-  ctx.fillText(`STAGE ${stage} ${FOODS[(stage - 1) % FOODS.length]}`, W / 2, 20);
-  ctx.textAlign = 'right';
-  ctx.fillText('🦝'.repeat(Math.max(lives, 0)), W - 12, 20);
-  ctx.fillStyle = timeLeft < 10 ? '#ff5050' : '#ffd23f';
-  ctx.fillRect(12, 40, (W - 24) * Math.max(timeLeft, 0) / Math.max(60, 100 - stage), 8);
+// ---------- 그리기 (작은 오락실 공통 스티커 스타일: 진한 테두리 + 아래 그림자 + Jua) ----------
+const INK = '#2b1d52';
+const FONT = '"Jua", "Apple SD Gothic Neo", sans-serif';
+const EMOJI = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
 
-  if (!ladders) return;
-  ctx.textAlign = 'center';
-  // 바닥
-  ctx.fillStyle = '#8b5a2b';
-  for (let f = 0; f < FLOORS; f++) {
-    let x = 0;
-    [...(gaps[f] || [])].sort((a, b) => a.x0 - b.x0).forEach((g) => { ctx.fillRect(x, floorY(f), g.x0 - x, 6); x = g.x1; });
-    ctx.fillRect(x, floorY(f), W - x, 6);
+function roundRect(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function panel(x, y, w, h, r, fill, lift = 4) {
+  ctx.fillStyle = INK; roundRect(x, y + lift, w, h, r); ctx.fill();
+  ctx.fillStyle = fill; roundRect(x, y, w, h, r); ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = INK; roundRect(x, y, w, h, r); ctx.stroke();
+}
+function label(text, x, y, size, fill = '#fff', align = 'center') {
+  ctx.font = `${size}px ${FONT}`;
+  ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(3, size * 0.22); ctx.strokeStyle = INK; ctx.strokeText(text, x, y);
+  ctx.fillStyle = fill; ctx.fillText(text, x, y);
+}
+// 발밑 그림자 + 이모지
+function sprite(e, x, y, size, shadow = true) {
+  if (shadow) {
+    ctx.fillStyle = 'rgba(43,29,82,.35)';
+    ctx.beginPath(); ctx.ellipse(x, y + size * 0.48, size * 0.36, size * 0.1, 0, 0, Math.PI * 2); ctx.fill();
   }
-  // 사다리
-  ctx.strokeStyle = '#d9b26f'; ctx.lineWidth = 3;
-  ladders.forEach((l) => {
-    const t = ladderTop(l.g), b = ladderBot(l.g);
-    ctx.beginPath(); ctx.moveTo(l.x - 9, t); ctx.lineTo(l.x - 9, b); ctx.moveTo(l.x + 9, t); ctx.lineTo(l.x + 9, b); ctx.stroke();
-    for (let y = t + 10; y < b; y += 14) { ctx.beginPath(); ctx.moveTo(l.x - 9, y); ctx.lineTo(l.x + 9, y); ctx.stroke(); }
-  });
-  ctx.font = '26px serif';
+  ctx.font = `${size}px ${EMOJI}`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#000';   // 컬러 이모지도 채우기 색의 투명도를 따라가므로 불투명하게 (그림자 색이 남아 있으면 흐려진다)
+  ctx.fillText(e, x, y);
+}
+function cloud(cx, cy, s) {
+  const bumps = [[-1.1, 0.25, 0.55], [-0.45, -0.15, 0.75], [0.35, -0.05, 0.7], [1.0, 0.3, 0.5]];
+  for (const pass of [0, 1, 2]) for (const [bx, by, br] of bumps) {
+    ctx.beginPath();
+    ctx.arc(cx + bx * s, cy + by * s + (pass === 0 ? 4 : 0), br * s + (pass === 1 ? 3 : 0), 0, Math.PI * 2);
+    ctx.fillStyle = pass === 2 ? 'rgba(255,255,255,.9)' : INK;
+    ctx.globalAlpha = pass === 2 ? 1 : 0.35;
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHud() {
+  const maxT = Math.max(60, 100 - stage);
+  panel(12, 10, 150, 40, 20, '#ffd23f');
+  sprite('⭐', 34, 30, 20, false);
+  label(score.toLocaleString(), 100, 30, 22);
+  panel(W / 2 - 62, 10, 124, 40, 20, '#ffffff');
+  label(`STAGE ${stage}`, W / 2 - 12, 30, 17, INK, 'center');
+  sprite(FOODS[(stage - 1) % FOODS.length], W / 2 + 44, 30, 20, false);
+  panel(W - 132, 10, 120, 40, 20, '#ffffff');
+  const n = Math.max(lives, 0);
+  for (let i = 0; i < Math.min(n, 5); i++) sprite('🦝', W - 112 + i * 20, 30, 18, false);
+  // 남은 시간
+  panel(12, 62, W - 24, 20, 10, '#ffffff', 3);
+  const tr = Math.max(timeLeft, 0) / maxT;
+  const g = ctx.createLinearGradient(0, 65, 0, 79);
+  g.addColorStop(0, timeLeft < 10 ? '#ff8a8a' : '#7dffb0');
+  g.addColorStop(1, timeLeft < 10 ? '#ff3b5c' : '#1fc46b');
+  ctx.fillStyle = g;
+  roundRect(15, 65, Math.max(14, (W - 30) * tr), 14, 7); ctx.fill();
+}
+
+function drawFloor(f) {
+  const y = floorY(f);
+  let x = 0;
+  const pieces = [];
+  [...(gaps[f] || [])].sort((a, b) => a.x0 - b.x0).forEach((g) => { pieces.push([x, g.x0]); x = g.x1; });
+  pieces.push([x, W]);
+  for (const [x0, x1] of pieces) {
+    if (x1 - x0 < 2) continue;
+    // 나무 널빤지: 테두리, 위 밝게 아래 진하게, 이음매
+    ctx.fillStyle = INK; roundRect(x0 - 2, y + 2, x1 - x0 + 4, 16, 6); ctx.fill();
+    const g = ctx.createLinearGradient(0, y, 0, y + 14);
+    g.addColorStop(0, '#f0b574'); g.addColorStop(1, '#b8713a');
+    ctx.fillStyle = g; roundRect(x0, y, x1 - x0, 14, 5); ctx.fill();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.fillRect(x0 + 5, y + 3, x1 - x0 - 10, 2);
+    ctx.fillStyle = 'rgba(43,29,82,.35)';
+    for (let k = x0 + 40; k < x1 - 10; k += 48) ctx.fillRect(k, y + 3, 2, 9);
+  }
+}
+
+function drawLadder(l) {
+  const t = ladderTop(l.g), b = ladderBot(l.g);
+  // 가로대
+  for (let y = t + 14; y < b; y += 14) {
+    ctx.fillStyle = INK; ctx.fillRect(l.x - 11, y - 3, 22, 6);
+    ctx.fillStyle = '#ffd9a0'; ctx.fillRect(l.x - 9, y - 1.5, 18, 3);
+  }
+  // 기둥
+  for (const dx of [-11, 11]) {
+    ctx.fillStyle = INK; roundRect(l.x + dx - 4, t, 8, b - t, 4); ctx.fill();
+    ctx.fillStyle = '#ffd9a0'; roundRect(l.x + dx - 2, t + 2, 4, b - t - 4, 2); ctx.fill();
+  }
+}
+
+function draw() {
+  const now = performance.now() / 1000;
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#4f8cff'); sky.addColorStop(1, '#8a4fe0');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(W / 2, H / 2); ctx.rotate(-Math.PI / 6);
+  ctx.fillStyle = 'rgba(255,255,255,.06)';
+  for (let x = -H; x < H; x += 56) ctx.fillRect(x, -H, 26, H * 2);
+  ctx.restore();
+  for (let k = 0; k < 3; k++) cloud(((k * 190 + now * (5 + k * 3)) % (W + 160)) - 80, 118 + k * 18, 22 + k * 3);
+
+  drawHud();
+  if (!ladders) return;
+
+  for (let f = 0; f < FLOORS; f++) drawFloor(f);
+  ladders.forEach(drawLadder);
+
   const food = FOODS[(stage - 1) % FOODS.length];
-  foods.forEach((fd) => { if (!fd.eaten) ctx.fillText(food, fd.x, floorY(fd.f) - 16); });
-  pots.forEach((q) => ctx.fillText(q.used ? '🏺' : '❓', q.x, floorY(q.f) - 16));
-  tacks.forEach((t) => ctx.fillText('📌', t.x, floorY(t.f) - 12));
-  bugs.forEach((b) => { ctx.save(); ctx.translate(b.x, floorY(b.f) - 16); ctx.scale(b.dir, 1); ctx.fillText('🐛', 0, 0); ctx.restore(); });
-  if (snake) ctx.fillText('🐍', snake.x, snake.y - 16);
-  ctx.save(); ctx.globalAlpha = invuln > 0 && Math.floor(invuln * 8) % 2 ? 0.35 : 1; ctx.translate(p.x, p.y - 18 - p.jy); ctx.scale(-p.face, 1); ctx.font = '30px serif'; ctx.fillText('🦝', 0, 0); ctx.restore();
+  foods.forEach((fd) => { if (!fd.eaten) sprite(food, fd.x, floorY(fd.f) - 17 + Math.sin(now * 4 + fd.x) * 1.5, 26); });
+  pots.forEach((q) => sprite(q.used ? '🏺' : '❓', q.x, floorY(q.f) - 17, 26));
+  tacks.forEach((t) => sprite('📌', t.x, floorY(t.f) - 13, 22));
+  bugs.forEach((b) => {
+    ctx.save(); ctx.translate(b.x, floorY(b.f) - 16); ctx.scale(b.dir, 1);
+    sprite('🐛', 0, 0, 26); ctx.restore();
+  });
+  if (snake) sprite('🐍', snake.x, snake.y - 17, 28);
+
+  // 너구리: 깜빡일 때(무적)는 흐리게, 점프하면 그림자가 작아진다
+  ctx.save();
+  ctx.globalAlpha = invuln > 0 && Math.floor(invuln * 8) % 2 ? 0.35 : 1;
+  ctx.fillStyle = 'rgba(43,29,82,.35)';
+  const sh = Math.max(0.4, 1 - p.jy / 50);
+  ctx.beginPath(); ctx.ellipse(p.x, p.y - 2, 18 * sh, 5 * sh, 0, 0, Math.PI * 2); ctx.fill();
+  // 회색 너구리가 보라 배경에 묻히지 않게: 노란 빛 고리 + 테두리 두른 흰 동그라미 위에 그린다
+  ctx.translate(p.x, p.y - 21 - p.jy);
+  const glow = 25 + Math.sin(now * 6) * 2;
+  ctx.fillStyle = 'rgba(255,210,63,.6)';
+  ctx.beginPath(); ctx.arc(0, 0, glow, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = INK;
+  ctx.beginPath(); ctx.arc(0, 3, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+  // 머리 위에 통통 튀는 노란 화살표
+  const by = -38 + Math.sin(now * 5) * 3;
+  ctx.beginPath(); ctx.moveTo(-8, by - 6); ctx.lineTo(8, by - 6); ctx.lineTo(0, by + 4); ctx.closePath();
+  ctx.fillStyle = '#ffd23f'; ctx.fill();
+  ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.strokeStyle = INK; ctx.stroke();
+  ctx.scale(-p.face, 1);
+  sprite('🦝', 0, 1, 30, false);
+  ctx.restore();
 
   if (msgTimer > 0) {
-    ctx.font = 'bold 32px monospace'; ctx.fillStyle = '#fff'; ctx.fillText(flash, W / 2, 110);
+    const s = 1 + Math.max(0, msgTimer - 0.6) * 1.5;
+    ctx.save(); ctx.translate(W / 2, 150); ctx.scale(s, s);
+    label(flash, 0, 0, 38, flash.startsWith('-') || flash === '💥' ? '#ff5fa2' : '#fff54f');
+    ctx.restore();
   }
 }
 
