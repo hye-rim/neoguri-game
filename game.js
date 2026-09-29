@@ -18,6 +18,16 @@ const floorY = (f) => 190 + f * 95;
 const ladderTop = (g) => floorY(g), ladderBot = (g) => floorY(g + 1);
 
 let state = 'ready', stage = 1, score = 0, lives = 3, timeLeft = 0;
+// 최고 점수: 로비 카드와 '내 기록' 요약이 읽는다 (새 기록이 나오는 순간 바로 저장해서 중간에 나가도 남는다)
+const BEST_KEY = 'neoguriBest';
+let best = 0;
+try { best = Number(localStorage.getItem(BEST_KEY)) || 0; } catch (_) {}
+function saveBest() {
+  if (score <= best) return false;
+  best = score;
+  try { localStorage.setItem(BEST_KEY, String(best)); } catch (_) {}
+  return true;
+}
 let invuln = 0, gaps = [], jumpReq = false, p, ladders, foods, pots, tacks, bugs, snake, msgTimer = 0, flash = '';
 const keys = {};
 
@@ -112,8 +122,10 @@ function loseLife() {
 
 function end(win) {
   state = 'over';
+  const isBest = score > 0 && score >= best;
+  saveBest();
   titleEl.textContent = '게임 오버';
-  msgEl.innerHTML = `스테이지 ${stage} · 점수 ${score}`;
+  msgEl.innerHTML = `스테이지 ${stage} · 점수 ${score}<br>${isBest ? '🏆 최고 기록!' : `최고 기록 ${best}`}`;
   startBtn.textContent = '다시 하기';
   overlay.classList.remove('hidden');
 }
@@ -384,7 +396,7 @@ function draw() {
 let last = 0;
 function loop(ts) {
   const dt = Math.min((ts - last) / 1000, 0.05); last = ts;
-  if (state === 'playing') update(dt);
+  if (state === 'playing') { update(dt); saveBest(); }
   draw();
   requestAnimationFrame(loop);
 }
